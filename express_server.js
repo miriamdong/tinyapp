@@ -37,17 +37,20 @@ app.get("/urls/new", (req, res) => {
 
 app.post("/urls", (req, res) => {
   // check the longURL is inside the urlDatabase
-  const longURL = req.body.longURL;
-  //if longURL is in the urlDatabase, go to add.get(/urls/:shortURL)
-  for (const key in urlDatabase) {
-    if (urlDatabase[key] === longURL) {
-      res.redirect(`/urls/${ key }`);
+  const longURL = req.body.longURL.includes("http") ? longURL : `http://${ req.body.longURL }`;
+
+  //if not, generate one to add to the urlDatabase, and redirect to (`/urls/:${ shortURL }`);
+  if (!Object.values(urlDatabase).includes(longURL)) {
+    const shortURL = generateRandomString();
+    urlDatabase[shortURL] = longURL;
+    res.redirect(`/urls/${ shortURL }`);
+  } else
+    for (const key in urlDatabase) {
+      //if longURL is in the urlDatabase, go to add.get(/urls/:shortURL)
+      if (urlDatabase[key] === longURL) {
+        res.redirect(`/urls/${ key }`);
+      }
     }
-  }
-  //if not, generateRandomString as shortURL, and add to the urlDatabase and redirect res.redirect(`/urls/:${ shortURL }`);
-  const shortURL = generateRandomString();
-  urlDatabase[shortURL] = longURL;
-  res.redirect(`/urls/${ shortURL }`);
 });
 
 
@@ -63,6 +66,12 @@ app.get("/urls/:shortURL", (req, res) => {
     longURL: urlDatabase[req.params.shortURL]
   };
   res.render("urls_show", templateVars);
+});
+
+app.post("/urls/:id", (req, res) => {
+  const longURL = req.body.longURL;
+  const id = req.params.id;
+  urlDatabase[id] = longURL;
 });
 
 app.get("/u/:shortURL", (req, res) => {
