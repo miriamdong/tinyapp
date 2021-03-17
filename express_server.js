@@ -236,8 +236,12 @@ app.get("/urls/:shortURL", (req, res) => {
 
 // delete an url
 app.post('/urls/:shortURL/delete', (req, res) => {
-  const shortURL = req.params.shortURL;
-  delete urlDatabase[shortURL];
+  const userId = req.cookies["userId"];
+  if (userId) {
+    const shortURL = req.params.shortURL;
+    delete urlDatabase[shortURL];
+  }
+
   res.redirect(`/urls`);
 });
 
@@ -245,13 +249,15 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 // edit the long url
 app.post("/urls/:id", (req, res) => {
   const longURL = req.body.longURL;
-
-  const id = req.params.id;
-  urlDatabase[id].longURL = longURL;
+  const userId = req.cookies["userId"];
+  if (userId) {
+    const id = req.params.id;
+    urlDatabase[id].longURL = longURL;
+    res.redirect(`/urls/${ id }`);
+  }
   // console.log("longURL: " + longURL);
   // console.log("id: " + id);
   // console.log("urlDatabase: " + urlDatabase);
-  res.redirect(`/urls/${ id }`);
 });
 
 // go to the website page
