@@ -143,7 +143,7 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
   const userId = req.cookies["userId"];
   let currentUser = users[userId];
-  if (!userId) currentUser = false;
+  if (!userId) res.redirect('/login');
   console.log(currentUser["email"]);
   // console.log(currentUser);
   const templateVars = {
