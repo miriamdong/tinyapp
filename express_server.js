@@ -30,7 +30,7 @@ const users = {
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur"
+    password: "1234"
   },
   "user2RandomID": {
     id: "user2RandomID",
@@ -49,6 +49,7 @@ app.get('/register', (req, res) => {
   res.render("register", templateVars);
 });
 
+// user register and generate Id
 app.post('/register', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
@@ -91,6 +92,7 @@ app.get('/login', (req, res) => {
   res.render("login", templateVars);
 });
 
+// user login
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
@@ -125,6 +127,7 @@ app.post('/login', (req, res) => {
 //   } return false;
 // };
 
+// display a list of urls
 app.get("/urls", (req, res) => {
   const userId = req.cookies["userId"];
 
@@ -140,11 +143,13 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
+
+// create a new url
 app.get("/urls/new", (req, res) => {
   const userId = req.cookies["userId"];
   let currentUser = users[userId];
   if (!userId) res.redirect('/login');
-  console.log(currentUser["email"]);
+  // console.log(currentUser["email"]);
   // console.log(currentUser);
   const templateVars = {
     email: currentUser["email"],
@@ -158,7 +163,7 @@ app.get("/urls/new", (req, res) => {
 
 
 
-
+// generate url and show user
 app.post("/urls", (req, res) => {
   // check the longURL is inside the urlDatabase
   const longURL = req.body.longURL.includes("http") ? longURL : `http://${ req.body.longURL }`;
@@ -177,28 +182,38 @@ app.post("/urls", (req, res) => {
 });
 
 
+
+//display url
+app.get("/urls/:shortURL", (req, res) => {
+  const userId = req.cookies["userId"];
+  let currentUser = users[userId];
+  if (!userId) currentUser = false;
+  const email = currentUser["email"];
+  const shortURL = req.params.shortURL;
+  const longURL = urlDatabase[req.params.shortURL];
+  const templateVars = {
+    userId: userId,
+    email: email,
+    shortURL: shortURL,
+    longURL: longURL
+  };
+  urlDatabase[shortURL] = {
+    longURL: longURL,
+    userId: userId
+  };
+  console.log('urlDatabase: ', urlDatabase);
+  res.render("urls_show", templateVars);
+});
+
+// delete an url
 app.post('/urls/:shortURL/delete', (req, res) => {
   const shortURL = req.params.shortURL;
   delete urlDatabase[shortURL];
   res.redirect(`/urls`);
 });
 
-app.get("/urls/:shortURL", (req, res) => {
 
-  const userId = req.cookies["userId"];
-  let currentUser = users[userId];
-  if (!userId) currentUser = false;
-  const email = currentUser["email"];
-
-  const templateVars = {
-    userId: userId,
-    email: email,
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL]
-  };
-  res.render("urls_show", templateVars);
-});
-
+// edit the long url
 app.post("/urls/:id", (req, res) => {
   const longURL = req.body.longURL;
   const id = req.params.id;
@@ -209,6 +224,7 @@ app.post("/urls/:id", (req, res) => {
   res.redirect(`/urls/${ id }`);
 });
 
+// go to the website page
 app.get("/u/:shortURL", (req, res) => {
   if (req.params.shortURL) {
     const longURL = urlDatabase[req.params.shortURL];
@@ -219,6 +235,7 @@ app.get("/u/:shortURL", (req, res) => {
 });
 
 
+// user logout
 app.post("/logout", (req, res) => {
   console.log(req.body);
   res.clearCookie('userId', req.body.userId);
