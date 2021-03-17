@@ -22,9 +22,16 @@ const generateRandomString = () => {
 
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+    longURL: "https://www.tsn.ca",
+    userID: "aJ48lW"
+  },
+  i3BoGr: {
+    longURL: "https://www.google.ca",
+    userID: "aJ48lW"
+  }
 };
+
 
 const users = {
   "userRandomID": {
@@ -190,7 +197,7 @@ app.get("/urls/:shortURL", (req, res) => {
   if (!userId) currentUser = false;
   const email = currentUser["email"];
   const shortURL = req.params.shortURL;
-  const longURL = urlDatabase[req.params.shortURL];
+  const longURL = urlDatabase[req.params.shortURL].longURL;
   const templateVars = {
     userId: userId,
     email: email,
@@ -226,12 +233,12 @@ app.post("/urls/:id", (req, res) => {
 
 // go to the website page
 app.get("/u/:shortURL", (req, res) => {
-  if (req.params.shortURL) {
-    const longURL = urlDatabase[req.params.shortURL];
-    // console.log("longURL: " + longURL);
-    res.redirect(longURL.includes("http") ? longURL : `http://${longURL}`);
-    return;
-  }
+  const shortURL = req.params.shortURL;
+  // console.log("shortURL: " + shortURL);
+  const longURL = urlDatabase[shortURL].longURL;
+  // console.log("longURL: " + longURL);
+  res.redirect(longURL.includes("http") ? longURL : `http://${longURL}`);
+  return;
 });
 
 
