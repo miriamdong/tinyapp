@@ -12,17 +12,19 @@
   </head>
 
   <body>
-    <h1 style="text-align: center; margin: 2em">Create Account</h1>
+    <div class="container" style="text-align: center; margin: 2em">
+      <h1 style="text-align: center; margin: 2em">Create Account</h1>
+      <p>Already registered? <a href="/login">Login!</a></p>
 
-    <form action="/register" method="POST" style="position:relative; display: block; text-align: center;">
-      <labelfor=" email">Email Address</label>
-        <br>
-        <input type="email" name="email" placeholder="email" required><br>
-        <labelfor="email">Password</label>
-          <br>
-          <input type="password" name="password" placeholder="Password" required><br>
-          <button input type="submit">Register</button>
-    </form>
+      <form action="/register" method="POST" style="position:relative; display: block; text-align: center;">
+        <labelfor=" email">Email Address</label>
+          <input type="email" name="email" placeholder="email" required><br><br />
+          <labelfor="email">Password</label>
+            <input type="password" name="password" placeholder="Password" required><br>
+            <br />
+            <button input type="submit">Register</button>
+      </form>
+    </div>
     </div>
     <!-- Bootstrap JS -->
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"

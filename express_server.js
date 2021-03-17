@@ -1,31 +1,36 @@
 const express = require("express");
-const app = express();
-const PORT = 8080; // default port 8080
+const morgan = require('morgan');
 const cookieParser = require('cookie-parser');
 const cookieSession = require('cookie-session');
-const path = require('path');
-// const bcrypt = require('bcrypt');
+// const path = require('path');
+const bcrypt = require('bcryptjs');
+// const methodOverride = require('method-override');
+
+const app = express();
+const PORT = process.env.PORT || 8080; // default port 8080
+const {
+  getUserByEmail
+} = require('./helpers');
+
 app.use(cookieParser());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(morgan('dev'));
+app.use(express.static('public'));
 app.use(express.urlencoded({
   extended: true
 }));
-// app.use(cookieSession({
-//   name: 'session',
-//   keys: [ /* secret keys */ ],
 
-//   // Cookie Options
-//   maxAge: 24 * 60 * 60 * 1000 // 24 hours
-// }))
+app.use(cookieSession({
+  name: 'feb01',
+  keys: ['anything', 'you want']
+}));
+
 app.set("view engine", "ejs");
 
 
 // generate random Id and short URL
-const generateRandomString = () => {
-  let r = Math.random().toString(36).substring(6);
-  return r;
-};
+const generateRandomString = () => Math.random().toString(36).substring(6);
+
 
 
 const urlDatabase = {
@@ -43,28 +48,30 @@ const users = {
   "aJ48lW": {
     id: "aJ48lW",
     email: "user@example.com",
-    password: "1234"
+    password: "$2b$10$vPAx.Vzo/nQHjdfkxluUfeI6JttCb/ybtnQYDl0EBfgthjaSBhWy6"
   },
   "pbux6n": {
     id: "pbux6n",
     email: "user2@example.com",
-    password: "dishwasher-funk"
+    password: "$2b$10$NDmEPwMGkP5H.xfU266s.eAVeNToAZx5QcxefBvVPh9N83IOksnBO"
   }
 };
 
 // Routes
 
-app.get('/', (req, res) => {
-  res.render('homepage');
-});
+// app.get('/', (req, res) => {
+//   res.render('homepage');
+// });
 
 
 // Create a GET /register endpoint that responds form template.
 app.get('/register', (req, res) => {
   const templateVars = {
-    userId: req.cookies["userId"],
-    email: req.cookies["email"],
-    password: req.cookies["password"],
+
+    user: users[req.cookies['userId']]
+
+    // userId: req.cookies["userId"],
+    // email: req.cookies["email"]
   };
   res.render("register", templateVars);
 });
@@ -77,26 +84,29 @@ app.post('/register', (req, res) => {
     return res.status(400).json({
       msg: 'Please include an email address & password'
     });
-  } else
-    for (const user in users) {
-      const found = Object.values(users[user]).includes(email);
-      if (!found) {
-        const id = generateRandomString();
-        users[id] = {
-          userId: id,
-          email: email,
-          password: password
-        };
-        res.cookie('userId', id);
-        // res.cookie('email', email);
-        res.redirect('/urls');
-        return users;
-      } else if (found) {
-        res.status(400).json({
-          msg: "Email already exists"
-        });
-      }
+  }
+  for (const id in users) {
+    const found = users[id].email === email;
+    if (found) {
+      return res.status(400).json({
+        msg: "Email already exists"
+      });
     }
+  }
+  const id = generateRandomString();
+  // hash the password
+  bcrypt.genSalt(10, (err, salt) => {
+    bcrypt.hash(password, salt, (err, hash) => {
+      users[id] = {
+        userId: id,
+        email: email,
+        password: hash
+      };
+      console.log("users: ", users);
+      res.cookie('userId', id);
+      res.redirect('/urls');
+    });
+  });
 });
 
 // Create a GET /login endpoint that responds with this new login form template.
@@ -105,9 +115,7 @@ app.get('/login', (req, res) => {
   let currentUser = users[userId];
   if (!userId) currentUser = false;
   const templateVars = {
-    userId: userId,
-    email: currentUser["email"],
-    password: req.cookies["password"],
+    user: users[req.cookies['userId']]
   };
   res.render("login", templateVars);
 });
@@ -116,28 +124,47 @@ app.get('/login', (req, res) => {
 app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
-
-  for (const user in users) {
-    const found = Object.values(users[user]).includes(email);
-    if (found) {
-      const currentUser = users[user];
-      console.log(currentUser);
-      if (currentUser.password === password) {
-        const userId = currentUser.id;
-        res.cookie('userId', userId);
-        res.redirect('/urls');
-      } else {
-        res.status(403).json({
-          msg: "password doesn't match"
-        });
-      }
-    } else {
-      res.status(403).json({
-        msg: `No user with email ${ req.body.email }`
-      });
+  let currentUser;
+  for (const id in users) {
+    if (users[id].email === email) {
+      currentUser = users[id];
+      break;
     }
   }
+  if (!currentUser) {
+    return res.status(403).send(`No user with email ${ req.body.email }`);
+  }
+  // compare passwords
+  console.log("current user:", currentUser);
+  bcrypt.compare(password, currentUser.password, (err, result) => {
+    console.log("result", result);
+    if (result) {
+
+      const userId = currentUser.id;
+      res.cookie('userId', userId);
+
+      res.redirect('/urls');
+    } else {
+      res.status(403).json({
+        msg: "password doesn't match"
+      });
+    }
+  });
 });
+
+
+// app.patch('/login', (req, res) => {
+//   const email = req.body.email;
+//   if (!getUserByEmail(email)) {
+//     return res.status(403).send(`No user with email ${ req.body.email }`);
+//   }
+
+
+
+
+
+// });
+
 
 // filter the list by userId
 const urlsForUser = (id) => {
@@ -224,7 +251,8 @@ app.get("/urls/:shortURL", (req, res) => {
     userId: userId,
     email: email,
     shortURL: shortURL,
-    longURL: longURL
+    longURL: longURL,
+    user: users[req.cookies['userId']]
   };
   urlDatabase[shortURL] = {
     longURL: longURL,
@@ -279,7 +307,9 @@ app.post("/logout", (req, res) => {
 });
 
 
-
+app.get("/404", (req, res) => {
+  res.render('404');
+});
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);

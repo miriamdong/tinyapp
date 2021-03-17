@@ -12,27 +12,27 @@
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
     </div>
-    <% if (userId && (userId != undefined)) { %>
+    <% if (user) { %>
     <form class="form-inline" action="/logout" method="POST" style="position:relative; display: inline-block;">
       <div class="form-group mb-2">
-        <p class="card-header">Logged in as: <%= email %></p>
+        <p class="card-header">Logged in as: <%= user.email %></p>
         <button type="submit" class="btn btn-primary">Logout
     </form>
-    <% } else  { %>
+    <% } else { %>
     <form class="form-inline" action="/login" method="GET" style="position:relative; display: inline-block;">
       <div class="form-group mb-2">
         <button type="submit" class="btn btn-primary">Login
         </button>
+      </div>
     </form>
     <form class="form-inline" action="/register" method="GET" style="position:relative; display: inline-block;">
       <div class="form-group mb-2">
         <button type="submit" class="btn btn-primary">Register
         </button>
+      </div>
+      </div>
     </form>
-
     <% } %>
     </div>
-
-
   </nav>
 </header>
