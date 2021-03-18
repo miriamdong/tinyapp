@@ -36,7 +36,7 @@ app.use(methodOverride('_method'));
 app.set("view engine", "ejs");
 
 // generate random Id and short URL
-const generateRandomString = () => Math.random().toString(36).substring(6);
+const generateRandomString = (length = 6) => Math.random().toString(20).substr(2, length);
 
 const urlDatabase = {
   b6UTxQ: {
@@ -333,7 +333,7 @@ app.get("/u/:id", (req, res) => {
 // user logout
 app.post("/logout", (req, res) => {
   req.session = null;
-  // I think change this to redirect to login makes more sense.
+  // I think change this should redirect to the login page which makes more sense.
   res.redirect('/urls');
 });
 
