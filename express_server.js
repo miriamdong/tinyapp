@@ -14,7 +14,7 @@ const {
 
 app.use(express.json());
 app.use(morgan('dev'));
-app.use(express.static('public'));
+// app.use(express.static('public'));
 app.use(express.urlencoded({
   extended: true
 }));
@@ -145,15 +145,14 @@ app.patch('/login', (req, res) => {
     if (!result) {
       return res.status(403).send("password doesn't match");
     }
-    // res.cookie('userId', userId);
+
     req.session.userId = userId;
     res.redirect('/urls');
   });
 });
 
 
-
-// filter the list by userId
+// Helper function to filter the list by userId
 const urlsForUser = (id) => {
   let urls = {};
   for (const key in urlDatabase) {
@@ -187,17 +186,20 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
-const getShortURL = (longURL) => {
-  console.log('longURL', longURL);
-  for (const shortURL in urlDatabase) {
+// Helper function to get shortURL from user's list
+const getShortURL = (userId, longURL) => {
+  // console.log('longURL', longURL);
+  const list = urlsForUser(userId);
+  for (const shortURL in list) {
     //if longURL is in the urlDatabase, go to add.get(/urls/:shortURL)
     console.log("shortURL: " + shortURL, urlDatabase[shortURL]);
-    if (urlDatabase[shortURL].longURL === longURL) {
+    if (list[shortURL].longURL === longURL) {
       return shortURL;
     }
   }
-  console.log('not found');
+  // console.log('not found');
 };
+
 // generate url and show user
 app.post("/urls", (req, res) => {
 
@@ -211,20 +213,21 @@ app.post("/urls", (req, res) => {
     return res.status(403).send(`bad user`);
   }
 
-  // check the longURL is inside the urlDatabase
   const longURL = req.body.longURL.includes("http") ? longURL : `http://${ req.body.longURL }`;
   if (!longURL) {
     return res.status(404).send('Bad URL');
   }
-  //if not, generate one to add to the urlDatabase, and redirect to (`/urls/:${ shortURL }`);
-  // console.log(req.body.longURL, req.session.userId);
-  let shortURL = getShortURL(longURL);
+
+  // check the longURL is inside the user's urlDatabase
+  let shortURL = getShortURL(userID, longURL);
 
   if (shortURL) {
     res.redirect(`/urls/${shortURL}`);
     return;
   }
 
+  //if not, generate one to add to the urlDatabase, and redirect to (`/urls/:${ shortURL }`);
+  // console.log(req.body.longURL, req.session.userId);
   shortURL = generateRandomString();
   urlDatabase[shortURL] = {
     longURL,
@@ -233,50 +236,44 @@ app.post("/urls", (req, res) => {
 
   // console.log(urlDatabase);
   res.redirect(`/urls/${ shortURL }`);
-
 });
 
 // create a new url
 app.get("/urls/new", (req, res) => {
   const userId = req.session.userId;
-  // console.log(users);
-  let currentUser = users[userId];
-  if (!userId) res.redirect('/login');
-  // console.log(currentUser);
-  // console.log(currentUser.email);
+  if (!userId) {
+    res.redirect('/login');
+  }
+
+  let user = users[userId];
   const templateVars = {
-    email: currentUser["email"],
-    userId: userId,
+    userId,
+    user,
     urls: urlDatabase,
-    user: currentUser
   };
-  // res.cookie('userId', userId);
+
   req.session.userId = userId;
   res.render("urls_new", templateVars);
 });
 
 //display url
-app.get("/urls/:shortURL", (req, res) => {
+app.get("/urls/:id", (req, res) => {
   const userId = req.session.userId;
-  let currentUser = users[userId];
+  let user = users[userId];
   if (!userId) {
     res.redirect('/login');
   }
-  const email = currentUser["email"];
-  const shortURL = req.params.shortURL;
+  const shortURL = req.params.id;
   const longURL = urlDatabase[shortURL].longURL;
-  const id = req.params.shortURL;
-  console.log("id: " + id);
   const list = urlsForUser(userId);
-  if (!list[req.params.shortURL]) {
+  if (!list[shortURL]) {
     return res.status(403).send(`You don't own the URL`);
   }
   const templateVars = {
     userId,
-    email,
     shortURL,
     longURL,
-    user: users[userId]
+    user
   };
   urlDatabase[shortURL] = {
     longURL: longURL,
@@ -287,13 +284,22 @@ app.get("/urls/:shortURL", (req, res) => {
 });
 
 // delete an url
-app.delete('/urls/:shortURL', (req, res) => {
+app.delete('/urls/:id', (req, res) => {
   const userId = req.session.userId;
-  if (userId) {
-    const shortURL = req.params.shortURL;
-    delete urlDatabase[shortURL];
+  if (!userId) {
+    res.redirect('/login');
+  }
+  const shortURL = req.params.id;
+  const list = urlsForUser(userId);
+
+  if (!list[shortURL]) {
+    return res.status(403).send(`You don't own the URL`);
   }
 
+  if (userId) {
+    const shortURL = req.params.id;
+    delete urlDatabase[shortURL];
+  }
   res.redirect(`/urls`);
 });
 
