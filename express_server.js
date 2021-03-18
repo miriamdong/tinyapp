@@ -3,8 +3,8 @@ const morgan = require('morgan');
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const methodOverride = require('method-override');
-const mongoose = require('mongoose');
-require('dotenv/config');
+// const mongoose = require('mongoose');
+// require('dotenv/config');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -20,21 +20,20 @@ app.use(express.urlencoded({
 }));
 app.use(cookieSession({
   name: 'session',
-  keys: ['anything', 'you want']
+  keys: ['key1', 'key2']
 }));
 app.use(methodOverride('_method'));
 
-mongoose.connect("process.env.DB_CONNECTION", {
-    useUnifiedTopology: true,
-    useNewUrlParser: true,
-    useCreateIndex: true
-  },
-  () => {
-    console.log('connected to DB');
-  });
+// mongoose.connect("process.env.DB_CONNECTION", {
+//     useUnifiedTopology: true,
+//     useNewUrlParser: true,
+//     useCreateIndex: true
+//   },
+//   () => {
+//     console.log('connected to DB');
+//   });
 
 app.set("view engine", "ejs");
-
 
 // generate random Id and short URL
 const generateRandomString = () => Math.random().toString(36).substring(6);
@@ -52,6 +51,7 @@ const urlDatabase = {
   }
 };
 
+
 const users = {
   "aJ48lW": {
     id: "aJ48lW",
@@ -66,7 +66,6 @@ const users = {
 };
 
 // Routes
-
 app.get('/', (req, res) => {
   const userId = req.session.userId;
   if (!userId) {
@@ -143,15 +142,12 @@ app.patch('/login', (req, res) => {
   // compare passwords
   bcrypt.compare(password, currentUser.password, (err, result) => {
     // console.log("result", result);
-    if (result) {
-      // res.cookie('userId', userId);
-      req.session.userId = userId;
-      res.redirect('/urls');
-    } else {
-      res.status(403).json({
-        msg: "password doesn't match"
-      });
+    if (!result) {
+      return res.status(403).send("password doesn't match");
     }
+    // res.cookie('userId', userId);
+    req.session.userId = userId;
+    res.redirect('/urls');
   });
 });
 
@@ -171,41 +167,73 @@ const urlsForUser = (id) => {
 // display a list of urls
 app.get("/urls", (req, res) => {
   const userId = req.session.userId;
-  let currentUser = users[userId];
-  // console.log(currentUser);
-  if (!userId) return res.status(403).send(`Please login first`);
+  if (!userId) {
+    return res.status(403).send(`Please login first`);
+  }
+
+  let user = users[userId];
+  console.log("user", user, userId);
+  if (!user) {
+    return res.status(403).send(`bad user`);
+  }
+
+  const urls = urlsForUser(userId);
+
   const templateVars = {
-    email: currentUser["email"],
-    userId: userId,
-    urls: urlsForUser(userId),
-    user: currentUser,
+    urls,
+    user
   };
+
   res.render("urls_index", templateVars);
 });
 
-
+const getShortURL = (longURL) => {
+  console.log('longURL', longURL);
+  for (const shortURL in urlDatabase) {
+    //if longURL is in the urlDatabase, go to add.get(/urls/:shortURL)
+    console.log("shortURL: " + shortURL, urlDatabase[shortURL]);
+    if (urlDatabase[shortURL].longURL === longURL) {
+      return shortURL;
+    }
+  }
+  console.log('not found');
+};
 // generate url and show user
 app.post("/urls", (req, res) => {
+
+  const userID = req.session.userId;
+  if (!userID) {
+    return res.status(403).send(`Please login first`);
+  }
+
+  let user = users[userID];
+  if (!user) {
+    return res.status(403).send(`bad user`);
+  }
+
   // check the longURL is inside the urlDatabase
   const longURL = req.body.longURL.includes("http") ? longURL : `http://${ req.body.longURL }`;
+  if (!longURL) {
+    return res.status(404).send('Bad URL');
+  }
   //if not, generate one to add to the urlDatabase, and redirect to (`/urls/:${ shortURL }`);
-  console.log(req.body.longURL, req.session.userId);
+  // console.log(req.body.longURL, req.session.userId);
+  let shortURL = getShortURL(longURL);
 
-  if (!Object.values(urlDatabase).includes(longURL)) {
-    const shortURL = generateRandomString();
-    urlDatabase[shortURL] = {
-      longURL: longURL,
-      userID: req.session.userId
-    };
-    console.log(urlDatabase);
-    res.redirect(`/urls/${ shortURL }`);
-  } else
-    for (const key in urlDatabase) {
-      //if longURL is in the urlDatabase, go to add.get(/urls/:shortURL)
-      if (urlDatabase[key] === longURL) {
-        res.redirect(`/urls/${ key }`);
-      }
-    }
+  if (shortURL) {
+    res.redirect(`/urls/${shortURL}`);
+    return;
+  }
+
+  shortURL = generateRandomString();
+  urlDatabase[shortURL] = {
+    longURL,
+    userID
+  };
+
+  // console.log(urlDatabase);
+  res.redirect(`/urls/${ shortURL }`);
+
 });
 
 // create a new url
@@ -244,11 +272,11 @@ app.get("/urls/:shortURL", (req, res) => {
     return res.status(403).send(`You don't own the URL`);
   }
   const templateVars = {
-    userId: userId,
-    email: email,
-    shortURL: shortURL,
-    longURL: longURL,
-    user: users[req.session.userId]
+    userId,
+    email,
+    shortURL,
+    longURL,
+    user: users[userId]
   };
   urlDatabase[shortURL] = {
     longURL: longURL,
@@ -270,8 +298,6 @@ app.delete('/urls/:shortURL', (req, res) => {
 });
 
 
-
-
 // edit the long url
 app.post("/urls/:id", (req, res) => {
   const longURL = req.body.longURL;
@@ -280,7 +306,7 @@ app.post("/urls/:id", (req, res) => {
     return res.status(403).send(`Please login first`);
   }
   const id = req.params.id;
-  console.log("id: " + id);
+  // console.log("id: " + id);
   const list = urlsForUser(userId);
   if (!list[req.params.id]) return res.status(403).send(`You don't own the URL`);
   urlDatabase[id].longURL = longURL;
@@ -290,12 +316,15 @@ app.post("/urls/:id", (req, res) => {
 });
 
 // go to the website page
-// I didn't add the part that if URL for the given ID does not exist, returns HTML with a relevant error message since you want the users to share the links.
 app.get("/u/:id", (req, res) => {
   const shortURL = req.params.id;
   // console.log("shortURL: " + shortURL);
   const longURL = urlDatabase[shortURL].longURL;
+  if (!longURL) {
+    return res.status(400).send("URL doesn't exist");
+  }
   // console.log("longURL: " + longURL);
+  // send them somewhere just to be safe
   res.redirect(longURL.includes("http") ? longURL : `http://${longURL}`);
   return;
 });
@@ -304,8 +333,8 @@ app.get("/u/:id", (req, res) => {
 // user logout
 app.post("/logout", (req, res) => {
   req.session = null;
-  // I change this to redirect to login because it makes more sense.
-  res.redirect('/login');
+  // I think change this to redirect to login makes more sense.
+  res.redirect('/urls');
 });
 
 
