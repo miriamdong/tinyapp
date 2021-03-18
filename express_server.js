@@ -119,21 +119,21 @@ app.post('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   let currentUser;
-  for (const id in users) {
-    if (users[id].email === email) {
-      currentUser = users[id];
-      break;
-    }
-  }
-  if (!currentUser) {
+  // for (const id in users) {
+  //   if (users[id].email === email) {
+  //     currentUser = users[id];
+  //     break;
+  //   }
+  // }
+  const userId = getUserByEmail(email, users);
+  currentUser = users[userId];
+  if (!userId) {
     return res.status(403).send(`No user with email ${ req.body.email }`);
   }
   // compare passwords
-  console.log("current user:", currentUser);
   bcrypt.compare(password, currentUser.password, (err, result) => {
     console.log("result", result);
     if (result) {
-      const userId = currentUser.id;
       // res.cookie('userId', userId);
       req.session.userId = userId;
       res.redirect('/urls');
