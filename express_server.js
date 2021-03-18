@@ -1,30 +1,26 @@
 const express = require("express");
 const morgan = require('morgan');
-// const cookieParser = require('cookie-parser');
 const cookieSession = require('cookie-session');
-// const path = require('path');
 const bcrypt = require('bcryptjs');
-// const methodOverride = require('method-override');
+const methodOverride = require('method-override');
 
 const app = express();
-const PORT = process.env.PORT || 8080; // default port 8080
+const PORT = process.env.PORT || 8080;
 const {
   getUserByEmail
 } = require('./helpers');
 
-// app.use(cookieParser());
 app.use(express.json());
 app.use(morgan('dev'));
 app.use(express.static('public'));
 app.use(express.urlencoded({
   extended: true
 }));
-
 app.use(cookieSession({
   name: 'session',
   keys: ['anything', 'you want']
 }));
-
+app.use(methodOverride('_method'));
 app.set("view engine", "ejs");
 
 
@@ -66,9 +62,6 @@ const users = {
 app.get('/register', (req, res) => {
   const templateVars = {
     user: users[req.session.userId]
-
-    // userId: req.cookies["userId"],
-    // email: req.cookies["email"]
   };
   res.render("register", templateVars);
 });
@@ -115,7 +108,7 @@ app.get('/login', (req, res) => {
 });
 
 // user login (submit handler)
-app.post('/login', (req, res) => {
+app.patch('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   let currentUser;
@@ -132,7 +125,7 @@ app.post('/login', (req, res) => {
   }
   // compare passwords
   bcrypt.compare(password, currentUser.password, (err, result) => {
-    console.log("result", result);
+    // console.log("result", result);
     if (result) {
       // res.cookie('userId', userId);
       req.session.userId = userId;
@@ -151,7 +144,6 @@ app.post('/login', (req, res) => {
 //   if (!getUserByEmail(email)) {
 //     return res.status(403).send(`No user with email ${ req.body.email }`);
 //   }
-
 
 
 // });
@@ -187,7 +179,7 @@ app.get("/urls", (req, res) => {
 // create a new url
 app.get("/urls/new", (req, res) => {
   const userId = req.session.userId;
-  console.log(users);
+  // console.log(users);
   let currentUser = users[userId];
   if (!userId) res.redirect('/login');
   // console.log(currentUser);
@@ -253,7 +245,7 @@ app.get("/urls/:shortURL", (req, res) => {
 });
 
 // delete an url
-app.post('/urls/:shortURL/delete', (req, res) => {
+app.delete('/urls/:shortURL', (req, res) => {
   const userId = req.session.userId;
   if (userId) {
     const shortURL = req.params.shortURL;

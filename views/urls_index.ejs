@@ -32,9 +32,7 @@
             <form action="/urls/<%= url %>">
               <td><input type="submit" value="Edit" /></td>
             </form>
-
-            <form method="POST" action="/urls/<%= url %>/delete">
-
+            <form method="POST" action="/urls/<%= url %>?_method=DELETE">
               <td><button>Delete</button></td>
             </form>
           </tr>
