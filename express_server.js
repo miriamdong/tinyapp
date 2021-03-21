@@ -14,7 +14,6 @@ const {
 
 app.use(express.json());
 app.use(morgan('dev'));
-// app.use(express.static('public'));
 app.use(express.urlencoded({
   extended: true
 }));
@@ -24,14 +23,6 @@ app.use(cookieSession({
 }));
 app.use(methodOverride('_method'));
 
-// mongoose.connect("process.env.DB_CONNECTION", {
-//     useUnifiedTopology: true,
-//     useNewUrlParser: true,
-//     useCreateIndex: true
-//   },
-//   () => {
-//     console.log('connected to DB');
-//   });
 
 app.set("view engine", "ejs");
 
@@ -108,7 +99,7 @@ app.post('/register', (req, res) => {
         email: email,
         password: hash
       };
-      // res.cookie('userId', id);
+
       req.session.userId = id;
       res.redirect('/urls');
     });
@@ -128,12 +119,7 @@ app.patch('/login', (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   let currentUser;
-  // for (const id in users) {
-  //   if (users[id].email === email) {
-  //     currentUser = users[id];
-  //     break;
-  //   }
-  // }
+
   const userId = getUserByEmail(email, users);
   currentUser = users[userId];
   if (!userId) {
@@ -141,11 +127,9 @@ app.patch('/login', (req, res) => {
   }
   // compare passwords
   bcrypt.compare(password, currentUser.password, (err, result) => {
-    // console.log("result", result);
     if (!result) {
       return res.status(403).send("password doesn't match");
     }
-
     req.session.userId = userId;
     res.redirect('/urls');
   });
@@ -188,7 +172,6 @@ app.get("/urls", (req, res) => {
 
 // Helper function to get shortURL from user's list
 const getShortURL = (userId, longURL) => {
-  // console.log('longURL', longURL);
   const list = urlsForUser(userId);
   for (const shortURL in list) {
     //if longURL is in the urlDatabase, go to add.get(/urls/:shortURL)
@@ -197,7 +180,6 @@ const getShortURL = (userId, longURL) => {
       return shortURL;
     }
   }
-  // console.log('not found');
 };
 
 // generate url and show user
@@ -213,7 +195,7 @@ app.post("/urls", (req, res) => {
     return res.status(403).send(`bad user`);
   }
 
-  const longURL = req.body.longURL.includes("http") ? longURL : `http://${ req.body.longURL }`;
+  const longURL = req.body.longURL;
   if (!longURL) {
     return res.status(404).send('Bad URL');
   }
@@ -227,14 +209,11 @@ app.post("/urls", (req, res) => {
   }
 
   //if not, generate one to add to the urlDatabase, and redirect to (`/urls/:${ shortURL }`);
-  // console.log(req.body.longURL, req.session.userId);
   shortURL = generateRandomString();
   urlDatabase[shortURL] = {
     longURL,
     userID
   };
-
-  // console.log(urlDatabase);
   res.redirect(`/urls/${ shortURL }`);
 });
 
@@ -279,7 +258,6 @@ app.get("/urls/:id", (req, res) => {
     longURL: longURL,
     userID: userId
   };
-  // console.log('urlDatabase: ', urlDatabase);
   res.render("urls_show", templateVars);
 });
 
@@ -312,35 +290,31 @@ app.post("/urls/:id", (req, res) => {
     return res.status(403).send(`Please login first`);
   }
   const id = req.params.id;
-  // console.log("id: " + id);
   const list = urlsForUser(userId);
   if (!list[req.params.id]) return res.status(403).send(`You don't own the URL`);
   urlDatabase[id].longURL = longURL;
   res.redirect(`/urls/${ id }`);
-  // console.log("longURL: " + longURL);
-  // console.log("urlDatabase: " + urlDatabase);
 });
 
 // go to the website page
 app.get("/u/:id", (req, res) => {
   const shortURL = req.params.id;
-  // console.log("shortURL: " + shortURL);
   const longURL = urlDatabase[shortURL].longURL;
   if (!longURL) {
     return res.status(400).send("URL doesn't exist");
   }
-  // console.log("longURL: " + longURL);
+
   // send them somewhere just to be safe
-  res.redirect(longURL.includes("http") ? longURL : `http://${longURL}`);
-  return;
+  return res.redirect(longURL.includes("http") ? longURL : `http://${longURL}`);
+
 });
 
 
 // user logout
 app.post("/logout", (req, res) => {
   req.session = null;
-  // I think change this should redirect to the login page which makes more sense.
-  res.redirect('/urls');
+  // I think this should redirect to the login page which makes more sense.
+  res.redirect('/');
 });
 
 
